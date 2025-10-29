@@ -8,7 +8,7 @@ This repository contains implementations and experiments with various GAN archit
 
 ## Dataset
 
-**Dataset Link:** [To be added]
+**Dataset Link:** https://www.kaggle.com/competitions/gan-getting-started/data
 
 ## Team Members
 
