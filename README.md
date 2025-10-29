@@ -12,10 +12,7 @@ This repository contains implementations and experiments with various GAN archit
 
 ## Team Members
 
-- [Team Member 1]
-- [Team Member 2]
-- [Team Member 3]
-- [Team Member 4]
+- Azmi Abidi - 40248132
 
 ## Project Structure
 
@@ -36,7 +33,7 @@ This repository contains implementations and experiments with various GAN archit
 
 1. Clone the repository
 2. Install dependencies: `pip install -r requirements.txt`
-3. Download the dataset (link above)
+3. Download the dataset from [here](https://www.kaggle.com/competitions/gan-getting-started/data)
 4. Check `plans/experiments.md` for planned experiments
 
 ## Requirements
