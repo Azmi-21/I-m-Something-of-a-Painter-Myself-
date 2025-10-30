@@ -15,16 +15,8 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 
+# Dataset for loading Monet paintings and photos.
 class MonetPhotoDataset(Dataset):
-    """
-    Dataset for loading Monet paintings and photos.
-    
-    Args:
-        data_dir: Root directory containing monet_jpg and photo_jpg folders
-        domain: Either 'monet' or 'photo'
-        transform: Optional transform to apply to images
-        img_size: Target image size (default: 256)
-    """
     
     def __init__(
         self,
@@ -83,15 +75,8 @@ class MonetPhotoDataset(Dataset):
 
 
 class PairedMonetPhotoDataset(Dataset):
-    """
-    Dataset that returns paired samples from both Monet and photo domains.
-    Useful for unpaired image-to-image translation (CycleGAN, FastCUT, etc.)
-    
-    Args:
-        data_dir: Root directory containing monet_jpg and photo_jpg folders
-        transform: Optional transform to apply to images
-        img_size: Target image size (default: 256)
-    """
+    # Dataset that returns paired samples from both Monet and photo domains.
+    # Useful for unpaired image-to-image translation (CycleGAN, FastCUT, etc.)
     
     def __init__(
         self,
@@ -107,11 +92,6 @@ class PairedMonetPhotoDataset(Dataset):
         return min(len(self.monet_dataset), len(self.photo_dataset))
     
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Returns:
-            monet_img: Monet painting tensor
-            photo_img: Photo tensor
-        """
         monet_img, _ = self.monet_dataset[idx % len(self.monet_dataset)]
         photo_img, _ = self.photo_dataset[idx % len(self.photo_dataset)]
         
@@ -119,16 +99,7 @@ class PairedMonetPhotoDataset(Dataset):
 
 
 def get_default_transforms(img_size: int = 256, augment: bool = False):
-    """
-    Get default image transforms for training or evaluation.
-    
-    Args:
-        img_size: Target image size
-        augment: Whether to apply data augmentation
-    
-    Returns:
-        torchvision.transforms.Compose object
-    """
+    # Get default image transforms for training or evaluation.
     if augment:
         return transforms.Compose([
             transforms.Resize((img_size, img_size)),

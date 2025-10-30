@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-Thank you for contributing to the GAN Getting Started project! Please follow these guidelines to maintain code quality and collaboration efficiency.
+Please follow these guidelines to maintain code quality and collaboration efficiency.
 
 ## Branch Naming Convention
 
@@ -17,7 +17,6 @@ Use descriptive branch names with the following prefixes:
 2. **Descriptive titles** - Use clear, concise PR titles
 3. **Description required** - Explain what changes were made and why
 4. **Review required** - At least one team member must review and approve
-5. **Tests passing** - Ensure all tests pass before requesting review
 6. **Resolve conflicts** - Keep your branch up to date with `main`
 
 ## Commit Style
@@ -45,11 +44,3 @@ feat: implement DCGAN generator architecture
 fix: correct discriminator loss calculation
 docs: add training instructions to README
 ```
-
-## Code Style
-
-- Follow PEP 8 style guidelines
-- Use meaningful variable and function names
-- Add docstrings to all functions and classes
-- Keep functions focused and modular
-- Comment complex logic
