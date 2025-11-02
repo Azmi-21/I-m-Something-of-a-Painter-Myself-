@@ -14,6 +14,7 @@ This repository contains implementations and experiments with various GAN archit
 
 - Azmi Abidi - 40248132
 
+
 ## Project Structure
 
 ```
