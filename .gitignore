@@ -49,3 +49,8 @@ Thumbs.db
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb_checkpoints
+
+# Utility scripts (local testing only)
+check_gpu.py
+check_pytorch_version.py
+install_pytorch_gpu.bat
