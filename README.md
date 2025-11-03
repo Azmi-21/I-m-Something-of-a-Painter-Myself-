@@ -14,6 +14,7 @@ This repository contains implementations and experiments with various GAN archit
 
 - Azmi Abidi - 40248132
 - Guerlain Hitier-Lallement - 40274516
+- Kaothar Reda - 40111879
 
 
 ## Project Structure
