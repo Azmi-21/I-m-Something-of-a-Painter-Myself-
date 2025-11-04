@@ -1,4 +1,4 @@
-# DCGAN Evaluation Summary
+# Basic DCGAN Evaluation Summary
 
 ## Model Information
 - **Architecture**: DCGAN (Deep Convolutional GAN)
@@ -62,21 +62,6 @@
 - **Inception Model**: Pretrained InceptionV3 (feature dimension: 2048)
 - **Hardware**: NVIDIA GeForce RTX 3050 Ti (4.29 GB)
 
-## Files Generated
-
-```
-results/fid_eval/
-├── metrics.csv                    # All FID scores
-├── fid_epoch_020.json            # Epoch 20 detailed results
-├── fid_epoch_035.json            # Epoch 35 detailed results
-├── fid_epoch_050.json            # Epoch 50 detailed results
-├── fake_epoch_020/               # 1000 generated images (epoch 20)
-├── fake_epoch_035/               # 1000 generated images (epoch 35)
-└── fake_epoch_050/               # 1000 generated images (epoch 50)
-```
-
 ## Conclusion
 
 The DCGAN model successfully learned to generate Monet-style paintings, with FID scores improving from 387.13 to 268.74 over 50 epochs. While the current results show promise, the model would benefit from extended training and architectural improvements to achieve state-of-the-art quality (FID < 50).
-
-**Next Steps**: Continue training for 50 more epochs and re-evaluate to determine if further improvement is possible with the current architecture.
