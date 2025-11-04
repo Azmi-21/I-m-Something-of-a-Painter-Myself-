@@ -30,9 +30,3 @@ fid_eval/
 - **FID 50-100**: Good quality - generated images are reasonably realistic
 - **FID 100-200**: Moderate quality - noticeable differences from real images
 - **FID > 200**: Poor quality - significant differences from real images
-
-## Notes
-
-- Each evaluation compares generated images against the real Monet dataset
-- Generated samples are stored in `fake_epoch_XXX/` directories
-- Typically evaluate at epochs 20, 35, and 50 to track training progress
