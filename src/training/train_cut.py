@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import torchvision.utils as vutils
 
-from ..data.dataset import MonetPhotoDataset
+from ..data.dataset import MonetPhotoDataset, PairedMonetPhotoDataset
 from ..models.fastCUT import build_fastcut, PatchNCELoss
 
 
@@ -13,7 +13,8 @@ def train(data_root, out_dir, epochs=100, batch_size=1, lr=0.0002, device=None, 
     device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs(out_dir, exist_ok=True)
 
-    dataset = MonetPhotoDataset(data_root, img_size=256)
+    # use paired dataset so each batch yields (monet_batch, photo_batch)
+    dataset = PairedMonetPhotoDataset(data_root, img_size=256)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
     # build FastCUT model to get Generator, Discriminator, and Projection Heads
@@ -26,7 +27,8 @@ def train(data_root, out_dir, epochs=100, batch_size=1, lr=0.0002, device=None, 
     gan_loss = nn.MSELoss()
 
     for epoch in range(epochs):
-        for i, (photos, monets) in enumerate(loader):
+        # PairedMonetPhotoDataset returns (monet, photo) per item, DataLoader batches them
+        for i, (monets, photos) in enumerate(loader):
             photos = photos.to(device)   # input X
             monets = monets.to(device)   # target Y
 
