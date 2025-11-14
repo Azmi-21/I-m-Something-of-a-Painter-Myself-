@@ -5,90 +5,166 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import torchvision.utils as vutils
 
-from ..data.dataset import MonetPhotoDataset, PairedMonetPhotoDataset
+from ..data.dataset import PairedMonetPhotoDataset
 from ..models.fastCUT import build_fastcut, PatchNCELoss
 
 
-def train(data_root, out_dir, epochs=100, batch_size=1, lr=0.0002, device=None, num_workers=4):
-    device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def random_crop(imgs, crop_size=128):
+    """
+    imgs: [B, C, H, W]  ->  random  crop_size x crop_size per image.
+    If crop_size >= H/W, returns imgs unchanged.
+    """
+    B, C, H, W = imgs.shape
+    if crop_size >= H or crop_size >= W:
+        return imgs
+
+    out = []
+    for b in range(B):
+        top = torch.randint(0, H - crop_size + 1, (1,)).item()
+        left = torch.randint(0, W - crop_size + 1, (1,)).item()
+        crop = imgs[b : b + 1, :, top : top + crop_size, left : left + crop_size]
+        out.append(crop)
+    return torch.cat(out, dim=0)
+
+
+def train(
+    data_root,
+    out_dir,
+    epochs=100,
+    batch_size=1,
+    lr=2e-4,
+    device=None,
+    num_workers=4,
+    crop_size=128,
+):
+    device = device or (
+        torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    )
     os.makedirs(out_dir, exist_ok=True)
 
-    # use paired dataset so each batch yields (monet_batch, photo_batch)
+    # paired dataset: each item -> (monet, photo)
     dataset = PairedMonetPhotoDataset(data_root, img_size=256)
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        pin_memory=True,
+    )
 
-    # build FastCUT model to get Generator, Discriminator, and Projection Heads
+    # build models
     G, D, H = build_fastcut(ngf=64, ndf=64, device=device)
-    nce_loss = PatchNCELoss(temp=0.07, num_patches=256)
+    nce_loss_fn = PatchNCELoss(temp=0.07, num_patches=256)
 
-    opt_G = torch.optim.Adam(list(G.parameters()) + list(H.parameters()), lr=lr, betas=(0.5, 0.999))
+    # G and projection heads share optimizer
+    opt_G = torch.optim.Adam(
+        list(G.parameters()) + list(H.parameters()),
+        lr=lr,
+        betas=(0.5, 0.999),
+    )
     opt_D = torch.optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
 
+    # LSGAN loss (as in CUT/FastCUT)
     gan_loss = nn.MSELoss()
 
+    # use a fixed batch for visual tracking, this allows seeing progression on same inputs
+    fixed_monet, fixed_photo = next(iter(loader))
+    fixed_photo = fixed_photo.to(device)
+
     for epoch in range(epochs):
-        # PairedMonetPhotoDataset returns (monet, photo) per item, DataLoader batches them
         for i, (monets, photos) in enumerate(loader):
-            photos = photos.to(device)   # input X
-            monets = monets.to(device)   # target Y
+            photos = photos.to(device)   # domain X
+            monets = monets.to(device)   # domain Y (target style)
 
-            # train discriminator
+            # crop randomly, this is done because CUT/FastCUT train on random crops
+            # to encourage learning from local patches. Not doing this causes collapse
+            photos_c = random_crop(photos, crop_size=crop_size)
+            monets_c = random_crop(monets, crop_size=crop_size)
+
+            # discriminator train step
             D.zero_grad()
-            fake_y = G(photos).detach()
 
-            pred_real = D(monets)
+            with torch.no_grad():
+                fake_y = G(photos_c)  # X -> Y_hat
+
+            pred_real = D(monets_c)
             pred_fake = D(fake_y)
 
-            loss_D = (gan_loss(pred_real, torch.ones_like(pred_real)) +
-                      gan_loss(pred_fake, torch.zeros_like(pred_fake))) * 0.5
+            loss_D_real = gan_loss(pred_real, torch.ones_like(pred_real))
+            loss_D_fake = gan_loss(pred_fake, torch.zeros_like(pred_fake))
+            loss_D = 0.5 * (loss_D_real + loss_D_fake)
 
             loss_D.backward()
             opt_D.step()
 
-            # train generator + H
+            # generator + projection heads train step
             G.zero_grad()
             H.zero_grad()
 
-            fake_y, feats_q = G(photos, return_feats=True)
-            _, feats_k = G(photos, return_feats=True)  # input features for NCE
+            # forward again so gradients flow through G
+            fake_y = G(photos_c)  # [B,3,h,w]
 
-            # PatchNCE: q = fake, k = photo
+            # NCE loss
+            feats_k = G.encode(photos_c)   # dict[layer] -> [B,C,H,W]
+            feats_q = G.encode(fake_y)     # dict[layer] -> [B,C,H,W]
+
             proj_q = {}
             proj_k = {}
-            for k_name in feats_q.keys():
-                if k_name in H:
-                    B, C, Hh, Ww = feats_q[k_name].shape
-                    proj_q[k_name] = H[k_name](feats_q[k_name]
-                                               .permute(0,2,3,1)
-                                               .reshape(-1, C)).reshape(B,Hh,Ww,-1).permute(0,3,1,2)
-                    proj_k[k_name] = H[k_name](feats_k[k_name]
-                                               .permute(0,2,3,1)
-                                               .reshape(-1, C)).reshape(B,Hh,Ww,-1).permute(0,3,1,2)
+            for lname, fmap_q in feats_q.items():
+                if lname not in H:
+                    continue
+                fmap_k = feats_k[lname]
 
-            loss_NCE = nce_loss(proj_q, proj_k)
-            loss_GAN = gan_loss(D(fake_y), torch.ones_like(pred_real))
+                B, C, Hh, Ww = fmap_q.shape
 
+                # flatten spatial, project, reshape back to [B,C_out,H,W]
+                q_flat = fmap_q.permute(0, 2, 3, 1).reshape(-1, C)
+                k_flat = fmap_k.permute(0, 2, 3, 1).reshape(-1, C)
+
+                z_q = H[lname](q_flat)
+                z_k = H[lname](k_flat)
+
+                C_out = z_q.shape[-1]
+                proj_q[lname] = z_q.view(B, Hh, Ww, C_out).permute(0, 3, 1, 2)
+                proj_k[lname] = z_k.view(B, Hh, Ww, C_out).permute(0, 3, 1, 2)
+
+            loss_NCE = nce_loss_fn(proj_q, proj_k)
+
+            # GAN loss for generator (fool D on fake Monet)
+            pred_fake_for_G = D(fake_y)
+            loss_GAN = gan_loss(pred_fake_for_G, torch.ones_like(pred_fake_for_G))
+
+            # FastCUT objective: L_G = L_GAN + L_NCE  (λ_NCE = 1)
             loss_G = loss_GAN + loss_NCE
 
             loss_G.backward()
             opt_G.step()
 
             if i % 50 == 0:
-                print(f"[{epoch}/{epochs}] [{i}/{len(loader)}] "
-                      f"D: {loss_D.item():.3f}  G: {loss_G.item():.3f}  NCE: {loss_NCE.item():.3f}")
+                print(
+                    f"[{epoch+1}/{epochs}] [{i}/{len(loader)}] "
+                    f"D: {loss_D.item():.3f}  "
+                    f"G: {loss_G.item():.3f}  "
+                    f"NCE: {loss_NCE.item():.3f}"
+                )
 
-        # save sample
+        # Save sample images (same fixed input each epoch)
         with torch.no_grad():
-            out = G(photos[:4])
-            vutils.save_image((out+1)/2, os.path.join(out_dir, f"epoch_{epoch+1:03}.png"))
+            sample_fake = G(fixed_photo[:4].to(device))
+            vutils.save_image(
+                (sample_fake + 1) / 2,
+                os.path.join(out_dir, f"epoch_{epoch+1:03}.png"),
+                nrow=2,
+            )
 
-        # save checkpoint
+        # Save checkpoint
         ckpt = {
             "G": G.state_dict(),
             "D": D.state_dict(),
             "H": H.state_dict(),
             "optG": opt_G.state_dict(),
-            "optD": opt_D.state_dict()
+            "optD": opt_D.state_dict(),
+            "epoch": epoch + 1,
         }
         torch.save(ckpt, os.path.join(out_dir, f"fastcut_epoch_{epoch+1:03}.pt"))
 
@@ -101,10 +177,15 @@ if __name__ == "__main__":
     p.add_argument("--batch_size", type=int, default=1)
     p.add_argument("--lr", type=float, default=0.0002)
     p.add_argument("--num_workers", type=int, default=4)
+    p.add_argument("--crop_size", type=int, default=128)
     args = p.parse_args()
 
-    train(args.data_root, args.out_dir,
-          epochs=args.epochs,
-          batch_size=args.batch_size,
-          lr=args.lr,
-          num_workers=args.num_workers)
+    train(
+        args.data_root,
+        args.out_dir,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        lr=args.lr,
+        num_workers=args.num_workers,
+        crop_size=args.crop_size,
+    )
