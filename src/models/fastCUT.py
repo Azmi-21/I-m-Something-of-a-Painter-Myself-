@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-# ------------------ BASIC BUILDING BLOCKS ------------------ #
+# residual block used in the generator 
+# this is a standard ResNet
 
 class ResBlock(nn.Module):
     def __init__(self, in_ch, out_ch, norm=True):
@@ -27,14 +27,14 @@ class ResBlock(nn.Module):
         return self.act(out + identity)
 
 
-# ---------------------- GENERATOR --------------------------- #
-# CUT/FastCUT uses: 1 downsample, N residual blocks, 1 upsample.
+# generator network
+# CUT/FastCUT uses: 1 downsample, N residual blocks, 1 upsample
 
 class FastCUT_Generator(nn.Module):
     def __init__(self, in_ch=3, ngf=64):
         super().__init__()
 
-        # Encoder
+        # encoder
         self.down = nn.Sequential(
             nn.Conv2d(in_ch, ngf, 7, padding=3),
             nn.InstanceNorm2d(ngf),
@@ -44,13 +44,13 @@ class FastCUT_Generator(nn.Module):
             nn.ReLU(True)
         )
 
-        # Middle (FastCUT paper uses fewer resblocks)
+    
         blocks = []
         for _ in range(4):
             blocks.append(ResBlock(ngf*2, ngf*2))
         self.middle = nn.Sequential(*blocks)
 
-        # Decoder
+        # decoder
         self.up = nn.Sequential(
             nn.ConvTranspose2d(ngf*2, ngf, 3, stride=2, padding=1, output_padding=1),
             nn.InstanceNorm2d(ngf),
@@ -76,14 +76,13 @@ class FastCUT_Generator(nn.Module):
         return out
 
 
-# ---------------------- DISCRIMINATOR ----------------------- #
-# PatchGAN discriminator — FastCUT requirement.
+# discriminator network (PatchGAN)
 
 class FastCUT_Discriminator(nn.Module):
     def __init__(self, in_ch=3, ndf=64):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Conv2d(in_ch, ndf, 4, 2, 1),
+            nn.Conv2d(in_ch, ndf, 4, 2, 1), 
             nn.LeakyReLU(0.2, True),
             
             nn.Conv2d(ndf, ndf*2, 4, 2, 1),
@@ -94,15 +93,14 @@ class FastCUT_Discriminator(nn.Module):
             nn.InstanceNorm2d(ndf*4),
             nn.LeakyReLU(0.2, True),
 
-            nn.Conv2d(ndf*4, 1, 4, 1, 1)  # PatchGAN score map
+            nn.Conv2d(ndf*4, 1, 4, 1, 1) 
         )
 
     def forward(self, x):
         return self.net(x)
 
 
-# ------------------------ NCE MLP --------------------------- #
-
+# mlp to project features for PatchNCE loss
 class PatchMLP(nn.Module):
     def __init__(self, in_dim, hidden=256):
         super().__init__()
@@ -115,8 +113,7 @@ class PatchMLP(nn.Module):
         return F.normalize(x, dim=-1)
 
 
-# ---------------------- PatchNCE Loss ------------------------ #
-
+# patchNCE loss according to CUT paper
 class PatchNCELoss(nn.Module):
     def __init__(self, temp=0.07, num_patches=256):
         super().__init__()
@@ -166,14 +163,12 @@ class PatchNCELoss(nn.Module):
         return total / n_layers
 
 
-# --------------------- BUILDER FUNCTION ---------------------- #
-
+# create FastCUT model
 def build_fastcut(ngf=64, ndf=64, device=None):
     device = device or torch.device("cpu")
     G = FastCUT_Generator(ngf=ngf).to(device)
     D = FastCUT_Discriminator(ndf=ndf).to(device)
 
-    # Projection heads for FastCUT (one MLP per encoder layer)
     H = nn.ModuleDict({
         "f1": PatchMLP(ngf),
         "f2": PatchMLP(ngf*2),

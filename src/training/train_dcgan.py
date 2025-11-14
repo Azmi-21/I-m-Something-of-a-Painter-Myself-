@@ -8,13 +8,13 @@ import torchvision.utils as vutils
 from ..data.dataset import MonetPhotoDataset
 from ..models.dcgan import build_dcgan256
 
-def train(data_root, out_dir, epochs=50, batch_size=8, nz=100, lr=2e-4, device=None):
+def train(data_root, out_dir, epochs=50, batch_size=8, nz=100, lr=2e-4, device=None, num_workers=4):
     device = device or (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
     os.makedirs(out_dir, exist_ok=True)
 
     # dataset expects transforms that resize to 256 and normalize to [-1,1]
     dataset = MonetPhotoDataset(data_root, img_size=256)  # adjust API if needed
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True)
 
     G, D = build_dcgan256(nz=nz, nc=3, ngf=64, ndf=64, device=device)
     criterion = nn.BCELoss()
@@ -76,5 +76,6 @@ if __name__ == "__main__":
     p.add_argument("--epochs", type=int, default=50)
     p.add_argument("--batch_size", type=int, default=8)
     p.add_argument("--nz", type=int, default=100)
+    p.add_argument("--num_workers", type=int, default=4)
     args = p.parse_args()
-    train(args.data_root, args.out_dir, epochs=args.epochs, batch_size=args.batch_size, nz=args.nz)
+    train(args.data_root, args.out_dir, epochs=args.epochs, batch_size=args.batch_size, nz=args.nz, num_workers=args.num_workers)
