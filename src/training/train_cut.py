@@ -56,13 +56,9 @@ def train(
     G, D, H = build_fastcut(ngf=64, ndf=64, device=device)
     nce_loss_fn = PatchNCELoss(temp=0.07, num_patches=256)
 
-    # G and projection heads share optimizer
-    opt_G = torch.optim.Adam(
-        list(G.parameters()) + list(H.parameters()),
-        lr=lr,
-        betas=(0.5, 0.999),
-    )
+    # --- OPTIMIZERS (TTUR) ---
     opt_D = torch.optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
+    opt_G = torch.optim.Adam(list(G.parameters()) + list(H.parameters()), lr=lr * 0.5, betas=(0.5, 0.999))
 
     # LSGAN loss (as in CUT/FastCUT)
     gan_loss = nn.MSELoss()
@@ -71,7 +67,16 @@ def train(
     fixed_monet, fixed_photo = next(iter(loader))
     fixed_photo = fixed_photo.to(device)
 
+    def step_lr_decay(optimizer, factor):
+        for g in optimizer.param_groups:
+            g["lr"] *= factor
+
     for epoch in range(epochs):
+
+        if (epoch + 1) == 40:
+            step_lr_decay(opt_D, 0.1)
+            step_lr_decay(opt_G, 0.1)
+
         for i, (monets, photos) in enumerate(loader):
             photos = photos.to(device)   # domain X
             monets = monets.to(device)   # domain Y (target style)
@@ -130,12 +135,16 @@ def train(
 
             loss_NCE = nce_loss_fn(proj_q, proj_k)
 
+            # Identity loss: G should be close to identity on Monet inputs
+            id_y = G(monets_c)
+            lambda_id = 0.1  # will try between 0.05 and 0.5
+            loss_id = torch.nn.functional.l1_loss(id_y, monets_c)
+
             # GAN loss for generator (fool D on fake Monet)
             pred_fake_for_G = D(fake_y)
             loss_GAN = gan_loss(pred_fake_for_G, torch.ones_like(pred_fake_for_G))
 
-            # FastCUT objective: L_G = L_GAN + L_NCE  (λ_NCE = 1)
-            loss_G = loss_GAN + loss_NCE
+            loss_G = loss_GAN + loss_NCE + lambda_id * loss_id
 
             loss_G.backward()
             opt_G.step()
@@ -147,6 +156,7 @@ def train(
                     f"G: {loss_G.item():.3f}  "
                     f"NCE: {loss_NCE.item():.3f}"
                 )
+                print(f"... D_LR={opt_D.param_groups[0]['lr']:.2e}  G_LR={opt_G.param_groups[0]['lr']:.2e}")
 
         # Save sample images (same fixed input each epoch)
         with torch.no_grad():
