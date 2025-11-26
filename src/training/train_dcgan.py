@@ -11,7 +11,7 @@ from ..models.dcgan import build_dcgan256
 def train(data_root, out_dir, epochs=50, batch_size=8, nz=100, lr=2e-4, device=None, n_critic=3):
     device = device or (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
     os.makedirs(out_dir, exist_ok=True)
-    
+
     # Clear CUDA cache if using GPU
     if device.type == "cuda":
         torch.cuda.empty_cache()
@@ -42,7 +42,7 @@ def train(data_root, out_dir, epochs=50, batch_size=8, nz=100, lr=2e-4, device=N
                 # Train discriminator multiple times for stability
                 for _ in range(n_critic):
                     D.zero_grad()
-                    
+
                     # Real images
                     label = torch.full((bsize,), real_label, dtype=torch.float, device=device)
                     output_real = D(imgs)
@@ -58,7 +58,7 @@ def train(data_root, out_dir, epochs=50, batch_size=8, nz=100, lr=2e-4, device=N
                     errD_fake = criterion(output_fake, label)
                     errD_fake.backward()
                     D_G_z1 = output_fake.mean().item()  # monitor discriminator output on fake
-                    
+
                     # Gradient clipping for stability
                     torch.nn.utils.clip_grad_norm_(D.parameters(), max_norm=1.0)
                     optimD.step()
@@ -70,7 +70,7 @@ def train(data_root, out_dir, epochs=50, batch_size=8, nz=100, lr=2e-4, device=N
                 errG = criterion(output, label)
                 errG.backward()
                 D_G_z2 = output.mean().item()  # monitor after G update
-                
+
                 # Gradient clipping for stability
                 torch.nn.utils.clip_grad_norm_(G.parameters(), max_norm=1.0)
                 optimG.step()
@@ -80,7 +80,7 @@ def train(data_root, out_dir, epochs=50, batch_size=8, nz=100, lr=2e-4, device=N
                     print(f"Epoch [{epoch+1}/{epochs}] Batch [{i}/{len(dataloader)}] "
                           f"Loss_D: {(errD_real+errD_fake).item():.4f} Loss_G: {errG.item():.4f} "
                           f"D(x): {D_x:.3f} D(G(z)): {D_G_z1:.3f}/{D_G_z2:.3f}")
-                
+
             except RuntimeError as e:
                 if "CUDA" in str(e) or "out of memory" in str(e):
                     print(f"\nCUDA error at epoch {epoch+1}, batch {i}: {e}")
@@ -90,7 +90,7 @@ def train(data_root, out_dir, epochs=50, batch_size=8, nz=100, lr=2e-4, device=N
                     continue
                 else:
                     raise e
-        
+
         # Clear cache after each epoch
         if device.type == "cuda":
             torch.cuda.empty_cache()
@@ -103,7 +103,7 @@ def train(data_root, out_dir, epochs=50, batch_size=8, nz=100, lr=2e-4, device=N
                                   nrow=4, padding=2)
         except Exception as e:
             print(f"Warning: Failed to save sample image: {e}")
-        
+
         # save checkpoint every 5 epochs and at the end
         if (epoch + 1) % 5 == 0 or (epoch + 1) == epochs:
             try:
