@@ -17,6 +17,7 @@ This repository contains implementations and experiments with various GAN archit
 - Kaothar Reda - 40111879
 
 
+
 ## Project Structure
 
 ```
