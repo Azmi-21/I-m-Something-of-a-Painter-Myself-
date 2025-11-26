@@ -1,0 +1,4 @@
+epoch,metric_name,score,timestamp,real_dir,fake_dir
+50,FID,268.7390,2025-11-03 22:30:17,data/monet_jpg,results/fid_eval/fake_epoch_050
+20,FID,387.1254,2025-11-03 22:36:26,data/monet_jpg,results/fid_eval/fake_epoch_020
+35,FID,273.3413,2025-11-03 22:37:45,data/monet_jpg,results/fid_eval/fake_epoch_035
