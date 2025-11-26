@@ -42,6 +42,12 @@ logs/
 *.pth
 *.ckpt
 
+# Evaluation results (keep metrics but ignore generated images)
+results/fid_eval/fake_*/
+results/fid_eval/*.json
+!results/fid_eval/README.md
+!results/fid_eval/metrics.csv
+
 # OS
 .DS_Store
 Thumbs.db
@@ -49,3 +55,8 @@ Thumbs.db
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb_checkpoints
+
+# Utility scripts (local testing only)
+check_gpu.py
+check_pytorch_version.py
+install_pytorch_gpu.bat
