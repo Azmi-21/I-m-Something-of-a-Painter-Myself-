@@ -32,6 +32,29 @@ This repository contains implementations and experiments with various GAN archit
 └── docs/             # Project reports and documentation
 ```
 
+## Kaggle Submission Notebook
+
+The main submission notebook for the Kaggle competition is located at:
+- `notebooks/kaggle_monet_fastcut_submission.ipynb`
+
+This notebook implements a **lightweight FastCUT model** optimized for:
+- **< 10 minute runtime** on Kaggle T4 GPU
+- **64x64 resolution** for speed
+- **PatchNCE contrastive loss** for unpaired image-to-image translation
+- **FID evaluation** using torchmetrics
+
+### Running on Kaggle
+
+1. Upload the notebook to Kaggle
+2. Enable GPU accelerator (T4)
+3. Run all cells
+
+The notebook will automatically:
+- Train the FastCUT model (~8-9 minutes)
+- Generate 250 fake Monet images
+- Compute FID score
+- Save results and visualizations
+
 ## Getting Started
 
 1. Clone the repository
