@@ -1,178 +1,140 @@
-# GAN Getting Started - COMP433
+# I'm Something of a Painter Myself - CycleGAN for Monet Style Transfer
 
-A deep learning project exploring Generative Adversarial Networks (GANs) for image generation and style transfer.
+COMP 433 - Project  
+Section: N
+
+## Authors
+- Azmi Abidi - 40248132
+- Guerlain Hitier Lallement - 40274516
+- Kaothar Reda - 40111879
 
 ## Project Overview
 
-This repository contains implementations and experiments with various GAN architectures, including DCGAN, FastCUT, and Latent-Diffusion models. The project focuses on training GANs on artistic datasets to generate novel images.
+This project implements a **CycleGAN** architecture using PyTorch for unpaired image-to-image translation, transforming photographs into Monet-style paintings. Developed for the [Kaggle "I'm Something of a Painter Myself"](https://www.kaggle.com/competitions/gan-getting-started) competition.
 
-## Dataset
+### Key Features
 
-**Dataset Link:** https://www.kaggle.com/competitions/gan-getting-started/data
-
-## Team Members
-
-- Azmi Abidi - 40248132
-- Guerlain Hitier-Lallement - 40274516
-- Kaothar Reda - 40111879
-
-
-
-## Project Structure
-
-```
-/
-├── src/              # Source code for models, training, and utilities
-├── notebooks/        # Jupyter notebooks for experiments and visualization
-├── scripts/          # Training and evaluation scripts
-├── results/          # Generated images and experiment results
-├── checkpoints/      # Model checkpoints
-├── logs/             # Training logs
-├── data/             # Dataset directory (gitignored)
-└── docs/             # Project reports and documentation
-```
-
-## Kaggle Submission Notebook
-
-The main submission notebook for the Kaggle competition is located at:
-- `notebooks/kaggle_monet_fastcut_submission.ipynb`
-
-This notebook implements a **lightweight FastCUT model** optimized for:
-- **< 10 minute runtime** on Kaggle T4 GPU
-- **64x64 resolution** for speed
-- **PatchNCE contrastive loss** for unpaired image-to-image translation
-- **FID evaluation** using torchmetrics
-
-### Running on Kaggle
-
-1. Upload the notebook to Kaggle
-2. Enable GPU accelerator (T4)
-3. Run all cells
-
-The notebook will automatically:
-- Train the FastCUT model (~8-9 minutes)
-- Generate 250 fake Monet images
-- Compute FID score
-- Save results and visualizations
-
-## Getting Started
-
-1. Clone the repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Download the dataset from [here](https://www.kaggle.com/competitions/gan-getting-started/data)
+- **ResNet-9 Generator**: 9 residual blocks with instance normalization for high-quality 256×256 image generation
+- **70×70 PatchGAN Discriminator**: Classifies overlapping patches as real/fake for better texture details
+- **Cycle Consistency Loss**: Ensures content preservation during style transfer
+- **Identity Loss**: Helps preserve color composition
+- **FID Evaluation**: Fréchet Inception Distance scoring for quality assessment
 
 ## Requirements
 
-- Python 3.8+
-- PyTorch 1.10+
-- CUDA-capable GPU (recommended)
+### Kaggle Environment (Recommended)
+- **GPU**: Tesla T4 (available free on Kaggle)
+- **Runtime**: ~80 minutes for full training
 
-## Training
-
-Train the DCGAN model on the Monet dataset:
-
-```bash
-python -m src.training.train_dcgan \
-    --data_root data \
-    --epochs 50 \
-    --batch_size 4 \
-    --n_critic 2
+### Software Dependencies
+All dependencies are pre-installed on Kaggle. The notebook installs any additional packages automatically:
+```
+PyTorch >= 2.0
+torchvision >= 0.15
+torchmetrics[image] >= 1.0
+torch-fidelity >= 0.3
+numpy, Pillow, matplotlib, tqdm
 ```
 
-**Training Parameters:**
-- `--data_root`: Path to dataset directory (should contain `monet_jpg/` folder)
-- `--epochs`: Number of training epochs (default: 50)
-- `--batch_size`: Batch size (default: 4, reduce if GPU memory issues)
-- `--n_critic`: Train discriminator N times per generator update (default: 3)
-- `--out_dir`: Output directory for samples and checkpoints (default: `outputs/`)
+## Dataset
 
-**Outputs:**
-- Generated samples: `outputs/epoch_XXX.png` (saved every epoch)
-- Model checkpoints: `outputs/checkpoint_epoch_XXX.pt` (saved every 5 epochs)
+### Obtaining the Dataset
 
-## Evaluation
+The dataset is provided by the Kaggle competition:
 
-### Step 1: Generate Samples from Trained Model
+1. **On Kaggle** (Recommended):
+   - The dataset is automatically available when you add the competition data
+   - Paths are pre-configured in the notebook:
+     ```python
+     MONET_DIR = '/kaggle/input/gan-getting-started/monet_jpg'
+     PHOTO_DIR = '/kaggle/input/gan-getting-started/photo_jpg'
+     ```
 
-Generate synthetic images from a trained checkpoint for evaluation:
+2. **Download Link**:
+   - Visit: https://www.kaggle.com/competitions/gan-getting-started/data
+   - Or use Kaggle CLI:
+     ```bash
+     kaggle competitions download -c gan-getting-started
+     ```
 
-```bash
-python src/evaluation/generate_samples.py \
-    --checkpoint outputs/checkpoint_epoch_050.pt \
-    --out_dir results/fid_eval/fake_epoch_050 \
-    --num_images 1000 \
-    --batch_size 32
+### Dataset Contents
+- **Monet paintings**: 300 images (256×256 pixels)
+- **Photographs**: 7,038 images (256×256 pixels)
+- **Format**: JPEG
+
+## How to Train the Model (on Kaggle)
+
+### Step 1: Set Up Kaggle Notebook
+
+1. Go to [Kaggle.com](https://www.kaggle.com) and sign in
+2. Navigate to the competition: [I'm Something of a Painter Myself](https://www.kaggle.com/competitions/gan-getting-started)
+3. Click **"Code"** → **"New Notebook"**
+
+### Step 2: Configure the Environment
+
+1. In your notebook settings (right sidebar):
+   - **Accelerator**: Select **GPU T4 x2**
+   - **Internet**: Enable **Internet access**
+
+### Step 3: Add the Dataset
+
+1. Click **"Add data"** (right sidebar)
+2. Select **"Competition Data"**
+3. Choose **"gan-getting-started"**
+
+### Step 4: Upload and Run the Notebook
+
+1. Upload `notebooks/model.ipynb` to Kaggle:
+   - Click **"File"** → **"Import Notebook"**
+   - Upload the notebook file
+
+2. **Run all cells** (Shift+Enter or "Run All")
+
+### Step 5: Training Outputs
+
+The notebook automatically generates:
+- **Checkpoints**: Saved every 5 epochs to `/kaggle/working/checkpoints/`
+- **Sample images**: Saved every epoch to `/kaggle/working/samples/`
+- **Submission file**: `images.zip` (7,000 generated images)
+
+### Expected Training Time
+- **Kaggle Tesla T4**: ~80 minutes
+
+## How to Validate the Model
+
+### FID Score Evaluation
+
+The notebook automatically computes FID (Fréchet Inception Distance) after training:
+
+```python
+# FID is computed automatically in the notebook
+# Compares 300 real Monet images vs 300 generated images
+fid_score = compute_fid(
+    real_dir='/kaggle/input/gan-getting-started/monet_jpg',
+    fake_dir='/kaggle/working/images',
+    num_samples=300
+)
 ```
 
-**Parameters:**
-- `--checkpoint`: Path to trained generator checkpoint
-- `--out_dir`: Output directory for generated images
-- `--num_images`: Number of images to generate (default: 1000)
-- `--batch_size`: Batch size for generation (default: 32)
-- `--nz`: Latent vector dimension (default: 100)
-- `--seed`: Random seed for reproducibility (optional)
+### Running on Sample Test Dataset
 
-### Step 2: Compute FID Score
+The notebook automatically:
+1. Generates 7,000 Monet-style images from the photo dataset
+2. Saves them to `/kaggle/working/images/`
+3. Creates `images.zip` for Kaggle submission
 
-Evaluate image quality using Fréchet Inception Distance (FID):
+## Kaggle Submission
 
-```bash
-python src/evaluation/evaluate_mifid.py \
-    --real_dir data/monet_jpg \
-    --fake_dir results/fid_eval/fake_epoch_050 \
-    --batch_size 32
-```
+After training completes:
 
-**Parameters:**
-- `--real_dir`: Directory containing real images (ground truth)
-- `--fake_dir`: Directory containing generated images
-- `--batch_size`: Batch size for processing (default: 32)
-- `--output_file`: Output CSV file (default: `results/fid_eval/metrics.csv`)
-- `--checkpoint_epoch`: Epoch number (auto-extracted from path if not provided)
+1. The notebook generates `images.zip` containing 7,000 Monet-style images
+2. Go to the competition page → **"Submit Predictions"**
+3. Upload `/kaggle/working/images.zip`
+4. Your MiFID score will be calculated automatically
 
-**FID Score Interpretation:**
-- **FID < 50**: Excellent quality
-- **FID 50-100**: Good quality
-- **FID 100-200**: Moderate quality
-- **FID > 200**: Poor quality
 
-### Example: Evaluate Multiple Epochs
+## References
 
-```bash
-# Generate samples for epoch 20
-python src/evaluation/generate_samples.py \
-    --checkpoint outputs/checkpoint_epoch_020.pt \
-    --out_dir results/fid_eval/fake_epoch_020 \
-    --num_images 1000
-
-# Evaluate epoch 20
-python src/evaluation/evaluate_mifid.py \
-    --real_dir data/monet_jpg \
-    --fake_dir results/fid_eval/fake_epoch_020
-
-# Generate samples for epoch 35
-python src/evaluation/generate_samples.py \
-    --checkpoint outputs/checkpoint_epoch_035.pt \
-    --out_dir results/fid_eval/fake_epoch_035 \
-    --num_images 1000
-
-# Evaluate epoch 35
-python src/evaluation/evaluate_mifid.py \
-    --real_dir data/monet_jpg \
-    --fake_dir results/fid_eval/fake_epoch_035
-
-# Generate samples for epoch 50
-python src/evaluation/generate_samples.py \
-    --checkpoint outputs/checkpoint_epoch_050.pt \
-    --out_dir results/fid_eval/fake_epoch_050 \
-    --num_images 1000
-
-# Evaluate epoch 50
-python src/evaluation/evaluate_mifid.py \
-    --real_dir data/monet_jpg \
-    --fake_dir results/fid_eval/fake_epoch_050
-```
-
-**Results:**
-- All FID scores are saved to `results/fid_eval/metrics.csv`
-- Individual JSON results: `results/fid_eval/fid_epoch_XXX.json`
+- [Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks](https://arxiv.org/abs/1703.10593) (Zhu et al., 2017)
+- [Kaggle Competition: I'm Something of a Painter Myself](https://www.kaggle.com/competitions/gan-getting-started)
+- [PyTorch CycleGAN Implementation](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix)
