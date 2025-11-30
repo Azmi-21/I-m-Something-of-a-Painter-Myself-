@@ -60,3 +60,5 @@ Thumbs.db
 check_gpu.py
 check_pytorch_version.py
 install_pytorch_gpu.bat
+
+checkpoints.*
