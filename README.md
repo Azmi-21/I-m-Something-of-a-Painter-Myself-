@@ -3,6 +3,10 @@
 COMP 433 - Project  
 Section: N
 
+Links:
+[Github](https://github.com/Azmi-21/I-m-Something-of-a-Painter-Myself-)
+[Video presentation](https://www.youtube.com/watch?v=hNeu57ZHXYQ)
+
 ## Authors
 - Azmi Abidi - 40248132
 - Guerlain Hitier Lallement - 40274516
